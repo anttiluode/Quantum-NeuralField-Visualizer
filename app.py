@@ -41,7 +41,7 @@ class QuantumField:
         
         # Field memory with Fourier analysis
         self.state_history = deque(maxlen=100)
-        self.coherence_history = deque(maxlen=100)
+        self.coherence_history = deque(maxlen=200)  # Increased to 200 for better visualization
         self.frequency_spectrum = np.zeros((size[0], size[1]//2 + 1), dtype=np.complex128)
         
     def add_wave_packet(self, position, momentum, amplitude=1.0, width=5.0):
@@ -240,7 +240,7 @@ class FieldVisualizerApp:
         self.ax6.spines['right'].set_color('white')
         self.ax6.spines['left'].set_color('white')
         
-        # Remove axes for coherence plot
+        # Label axes
         self.ax6.set_xlabel('Time Steps', color='white')
         self.ax6.set_ylabel('Coherence', color='white')
         
@@ -309,8 +309,9 @@ class FieldVisualizerApp:
         """Handle resolution change by reinitializing QuantumField and plots."""
         # Confirm change with the user
         if messagebox.askyesno("Change Resolution", "Changing resolution will reset the simulation. Continue?"):
-            # Stop the current simulation
+            # Pause the simulation
             self.paused = True
+            self.pause_button.config(text="Resume")
             time.sleep(0.1)  # Brief pause to ensure thread safety
             
             # Update QuantumField
@@ -396,10 +397,22 @@ class FieldVisualizerApp:
         if reset:
             self.coherence_history = deque(maxlen=200)
             self.coherence_plot.set_data([], [])
+            self.ax6.set_xlim(0, 200)
+            self.ax6.set_ylim(0, 1)
         else:
             self.coherence_history.append(self.quantum_field.coherence)
-            self.coherence_plot.set_data(range(len(self.coherence_history)), list(self.coherence_history))
-            self.ax6.set_xlim(max(0, len(self.coherence_history)-200), len(self.coherence_history))
+            y_data = list(self.coherence_history)
+            x_data = np.arange(len(y_data))
+            
+            if len(y_data) <= 200:
+                # If less than or equal to 200 points, plot normally
+                self.coherence_plot.set_data(x_data, y_data)
+                self.ax6.set_xlim(0, 200)
+            else:
+                # If more than 200 points, show the latest 200
+                self.coherence_plot.set_data(x_data[-200:], y_data[-200:])
+                self.ax6.set_xlim(len(y_data)-200, len(y_data))
+            
             self.ax6.set_ylim(0, 1)
         
         # Refresh the canvas
